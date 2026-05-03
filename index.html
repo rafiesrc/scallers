@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reddit Workflow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Design tokens from Figma ── */
+:root {
+  --color-text-primary: #09090b;
+  --color-text-secondary: #4e4d52;
+  --color-text-tertiary: #717179;
+  --color-text-placeholder: #a1a1a9;
+  --color-text-inverse: #ffffff;
+  --color-surface-page: #ffffff;
+  --color-surface-muted: #f2f2f2;
+  --color-surface-overlay: #0a0a0a;
+  --color-border-strong: #ececef;
+  --color-border-subtle: #f0f0f0;
+  --color-state-active-bg: #0a0a0a;
+  --brand-500: #5465f8;
+  --neutral-300: #e7e7e7;
+  --shadow-sleek: 0px 1px 3px 0px rgba(18,18,18,0.06);
+  --shadow-subtle: 0px 1px 1.5px rgba(18,18,18,0.06);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--color-surface-muted); color: var(--color-text-primary); height: 100vh; display: flex; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 232px;
+  min-width: 232px;
+  background: var(--color-surface-page);
+  border-right: 1px solid var(--color-border-strong);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-border-strong);
+}
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-logo {
+  width: 24px; height: 24px;
+  background: var(--color-state-active-bg);
+  border-radius: 5.25px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 500; color: white; letter-spacing: -0.21px;
+}
+.brand-name { font-size: 14px; font-weight: 500; letter-spacing: -0.21px; color: var(--color-text-primary); }
+.brand-badge {
+  font-size: 10px; font-weight: 500; color: #717179;
+  background: var(--color-surface-muted);
+  border: 0.75px solid var(--color-border-strong);
+  border-radius: 4px; padding: 1px 5px;
+}
+.collapse-btn { width: 16px; height: 16px; opacity: 0.4; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+.sidebar-body { flex: 1; overflow-y: auto; padding: 12px 8px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Quick actions */
+.quick-actions { display: flex; gap: 8px; }
+.quick-action-bar {
+  flex: 1;
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 4px 4px 10px;
+  cursor: pointer;
+}
+.quick-action-bar span { font-size: 14px; font-weight: 500; color: var(--color-text-tertiary); }
+.kbd {
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 12px; font-weight: 500; color: var(--color-text-placeholder);
+  display: flex; align-items: center; gap: 1px;
+}
+.quick-action-search {
+  width: 28px; height: 28px;
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px; box-shadow: var(--shadow-subtle);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; gap: 2px;
+}
+
+/* Nav items */
+.nav-section { display: flex; flex-direction: column; flex: 1; gap: 18px; }
+.nav-group { display: flex; flex-direction: column; }
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px; font-weight: 500;
+  color: var(--color-text-primary);
+  letter-spacing: -0.21px;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.nav-item:hover { background: var(--color-surface-muted); }
+.nav-item.active { background: var(--color-surface-muted); }
+.nav-item svg { flex-shrink: 0; opacity: 0.7; }
+.nav-item .chevron { margin-left: auto; opacity: 0.4; }
+.nav-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* Status card */
+.status-card {
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sleek);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.usage-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.usage-label { color: var(--color-text-secondary); font-weight: 400; }
+.usage-val { color: var(--color-text-primary); font-weight: 500; }
+.progress-track { background: var(--neutral-300); border-radius: 99px; height: 6px; width: 100%; position: relative; }
+.progress-fill { height: 6px; border-radius: 99px; }
+.upgrade-btn {
+  background: var(--color-surface-overlay); color: white;
+  border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 500;
+  text-align: center; cursor: pointer; box-shadow: var(--shadow-sleek);
+}
+.reset-note { font-size: 12px; color: var(--color-text-tertiary); text-align: center; }
+
+/* Settings section */
+.section-label { font-size: 12px; font-weight: 500; color: var(--color-text-tertiary); padding: 0 10px; letter-spacing: -0.18px; }
+
+/* Profile */
+.profile-card {
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px; box-shadow: var(--shadow-sleek);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px;
+}
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #d0d0d0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #555; border: 0.7px solid var(--color-border-subtle); flex-shrink: 0; }
+.profile-info { display: flex; flex-direction: column; gap: 0; }
+.profile-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); line-height: 16px; }
+.profile-email { font-size: 12px; font-weight: 500; color: var(--color-text-tertiary); line-height: 16px; white-space: nowrap; }
+
+/* ── Main area ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Top bar */
+.topbar {
+  background: var(--color-surface-page);
+  border-bottom: 1px solid var(--color-border-strong);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; height: 48px; flex-shrink: 0;
+}
+.topbar-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.topbar-btn {
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px; box-shadow: var(--shadow-sleek);
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; font-size: 14px; font-weight: 500;
+  color: var(--color-text-primary); cursor: pointer; white-space: nowrap;
+}
+.topbar-btn-primary {
+  background: var(--color-surface-overlay); color: white;
+  border: none; border-radius: 8px; box-shadow: var(--shadow-sleek);
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; font-size: 14px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+}
+.seg-tabs {
+  background: var(--color-surface-muted);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px; padding: 1px;
+  display: flex; align-items: center;
+}
+.seg-tab {
+  padding: 3px 10px; border-radius: 7px; font-size: 14px; font-weight: 500;
+  color: var(--color-text-placeholder); cursor: pointer; transition: all 0.15s;
+}
+.seg-tab.active { background: var(--color-surface-page); color: var(--color-text-primary); box-shadow: var(--shadow-sleek); }
+
+/* Sub-topbar */
+.subtopbar {
+  background: var(--color-surface-page);
+  border-bottom: 1px solid var(--color-border-strong);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px; height: 52px; flex-shrink: 0;
+}
+.ai-filter-group { display: flex; align-items: center; gap: 8px; }
+.step-label { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); }
+.ai-btn {
+  display: flex; align-items: center; gap: 6px;
+  border: 0.75px solid var(--color-border-strong);
+  border-radius: 8px; padding: 4px 10px;
+  font-size: 14px; font-weight: 500; color: var(--color-text-primary);
+  cursor: pointer; background: var(--color-surface-page); transition: all 0.12s;
+}
+.ai-btn:hover { border-color: #d0d0d0; background: var(--color-surface-muted); }
+.ai-btn.active { background: var(--color-surface-muted); border-color: var(--color-border-strong); }
+.ai-logo { width: 16px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+
+/* Tab bar */
+.tabbar {
+  background: var(--color-surface-page);
+  border-bottom: 1px solid var(--color-border-strong);
+  display: flex; align-items: flex-end; gap: 0;
+  padding: 0 24px; height: 52px; flex-shrink: 0;
+}
+.tab-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0 10px; margin-right: 0;
+  font-size: 14px; font-weight: 500; color: var(--color-text-placeholder);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  margin-right: 24px; transition: all 0.15s;
+}
+.tab-item.active { color: var(--color-text-primary); border-bottom-color: var(--color-text-primary); }
+.tab-item:hover:not(.active) { color: var(--color-text-secondary); }
+
+/* Content area */
+.content { flex: 1; overflow-y: auto; background: var(--color-surface-muted); }
+.page { display: none; }
+.page.active { display: flex; flex-direction: column; }
+
+/* ── Chip / badge ── */
+.chip {
+  font-size: 12px; font-weight: 500; color: var(--color-text-tertiary);
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-strong);
+  border-radius: 6px; padding: 2px 8px;
+  white-space: nowrap; line-height: 16px;
+}
+.chip-muted { background: var(--color-surface-muted); border-color: transparent; color: var(--color-text-tertiary); }
+.chip-red { background: #fff0f0; border-color: #f5c6cb; color: #c0392b; }
+
+/* ── Cards ── */
+.card {
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px; box-shadow: var(--shadow-sleek);
+  padding: 16px;
+  transition: border-color 0.15s;
+}
+.card:hover { border-color: var(--color-border-strong); }
+.card.selected { border-color: #c0c0c0; }
+
+/* Content layout */
+.content-inner { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.two-col { display: flex; gap: 16px; }
+
+/* Filter panel */
+.filter-panel {
+  width: 220px; min-width: 220px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.filter-card {
+  background: var(--color-surface-page);
+  border: 0.75px solid var(--color-border-subtle);
+  border-radius: 8px; box-shadow: var(--shadow-sleek);
+  padding: 16px; position: sticky; top: 0;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.filter-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+.filter-group { display: flex; flex-direction: column; gap: 6px; }
+.filter-label { font-size: 12px; font-weight: 400; color: var(--color-text-secondary); }
+.filter-input {
+  background: var(--color-surface-muted);
+  border: 0.75px solid var(--color-border-strong);
+  border-radius: 6px; padding: 5px 10px;
+  font-size: 13px; font-family: 'Inter', sans-serif;
+  color: var(--color-text-primary); outline: none; width: 100%;
+  transition: border-color 0.15s;
+}
+.filter-input:focus { border-color: var(--color-text-secondary); }
+.filter-select {
+  background: var(--color-surface-muted);
+  border: 0.75px solid var(--color-border-strong);
+  border-radius: 6px; padding: 5px 10px;
+  font-size: 13px; font-family: 'Inter', sans-serif;
+  color: var(--color-text-primary); outline: none; width: 100%;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a1a1a9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px;
+}
+.check-row { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--color-text-primary); }
+.check-row input { accent-color: var(--color-state-active-bg); width: 12px; height: 12px; }
+.apply-btn {
+  background: var(--color-surface-overlay); color: white;
+  border: none; border-radius: 8px; padding: 7px 12px;
+  font-size: 13px; font-weight: 500; font-family: 'Inter', sans-serif;
+  cursor: pointer; width: 100%; text-align: center;
+}
+
+/* Thread list */
+.thread-list { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.thread-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.thread-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); line-height: 20px; margin-bottom: 4px; }
+.thread-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 18px; }
+.thread-stats { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--color-text-tertiary); }
+.thread-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.thread-row { display: flex; gap: 16px; align-items: flex-start; }
+
+/* Pill selectors */
+.pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill {
+  font-size: 12px; font-weight: 500;
+  border: 0.75px solid var(--color-border-strong);
+  border-radius: 99px; padding: 4px 12px;
+  cursor: pointer; color: var(--color-text-secondary);
+  transition: all 0.12s; background: var(--color-surface-page);
+  line-height: 16px;
+}
+.pill:hover { border-color: var(--color-text-secondary); }
+.pill.active { background: var(--color-surface-overlay); color: white; border-color: var(--color-surface-overlay); }
+
+/* Settings panel */
+.settings-panel { width: 256px; min-width: 256px; display: flex; flex-direction: column; gap: 10px; }
+.settings-card { background: var(--color-surface-page); border: 0.75px solid var(--color-border-subtle); border-radius: 8px; box-shadow: var(--shadow-sleek); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.settings-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+.settings-label { font-size: 12px; color: var(--color-text-secondary); }
+.radio-row { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+.radio-row input { accent-color: var(--color-state-active-bg); }
+.gen-btn { background: var(--color-surface-overlay); color: white; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; width: 100%; }
+
+/* Output area */
+.output-area { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.output-header { display: flex; align-items: center; justify-content: space-between; }
+.output-count { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+.regen-btn { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--color-text-secondary); cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; font-weight: 500; }
+
+.output-card { background: var(--color-surface-page); border: 0.75px solid var(--color-border-subtle); border-radius: 8px; box-shadow: var(--shadow-sleek); padding: 14px; transition: border-color 0.15s; }
+.output-card:hover { border-color: var(--color-border-strong); }
+.output-card.selected { border-color: #b0b0b0; }
+.output-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+.output-card-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.output-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.output-text { font-size: 13px; line-height: 20px; color: var(--color-text-secondary); }
+.output-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 0.75px solid var(--color-border-subtle); }
+.footer-link { font-size: 12px; color: var(--color-text-tertiary); cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; }
+.footer-link:hover { color: var(--color-text-secondary); }
+.word-count { margin-left: auto; font-size: 12px; color: var(--color-text-tertiary); }
+
+/* Idea grid */
+.idea-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.idea-card { background: var(--color-surface-page); border: 0.75px solid var(--color-border-subtle); border-radius: 8px; box-shadow: var(--shadow-sleek); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.idea-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.idea-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); line-height: 18px; }
+.idea-desc { font-size: 12px; color: var(--color-text-secondary); line-height: 17px; flex: 1; }
+.idea-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 0.75px solid var(--color-border-subtle); }
+.idea-angle { font-size: 12px; color: var(--color-text-tertiary); }
+.idea-actions { display: flex; gap: 6px; }
+
+/* Buttons */
+.btn-ghost { background: var(--color-surface-page); border: 0.75px solid var(--color-border-strong); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: 'Inter', sans-serif; color: var(--color-text-secondary); cursor: pointer; transition: all 0.1s; }
+.btn-ghost:hover { border-color: var(--color-text-secondary); }
+.btn-dark { background: var(--color-surface-overlay); color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; }
+
+/* Subreddit info */
+.sub-info { background: var(--color-surface-muted); border-radius: 6px; padding: 10px 12px; font-size: 12px; }
+.sub-name { font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+.sub-desc { color: var(--color-text-secondary); line-height: 16px; }
+.sub-divider { border-top: 0.75px solid var(--color-border-strong); margin: 8px 0; }
+.sub-rules-label { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 3px; }
+.sub-rules { font-size: 12px; color: var(--color-text-secondary); line-height: 16px; }
+
+/* Author picker */
+.author-card { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; border: 0.75px solid var(--color-border-strong); cursor: pointer; }
+.author-card.selected { border-color: #999; background: var(--color-surface-muted); }
+.author-avatar { width: 24px; height: 24px; border-radius: 50%; background: #d5d5d5; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #555; flex-shrink: 0; }
+.author-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); line-height: 14px; }
+.author-role { font-size: 11px; color: var(--color-text-tertiary); }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px);
+  background: var(--color-surface-overlay); color: white;
+  padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+  opacity: 0; transition: all 0.25s ease; z-index: 100; white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 2px; }
+
+/* Divider */
+.divider { height: 0.75px; background: var(--color-border-strong); width: 100%; }
+
+/* Loading overlay on regen */
+.loading { opacity: 0.45; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="brand">
+      <div class="brand-logo">S</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="brand-name">Scaller</span>
+        <span class="brand-badge">Pro</span>
+      </div>
+    </div>
+    <div class="collapse-btn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="1.2" rx="0.6" fill="#09090b"/><rect x="2" y="7.4" width="8" height="1.2" rx="0.6" fill="#09090b"/><rect x="2" y="11.8" width="10" height="1.2" rx="0.6" fill="#09090b"/></svg>
+    </div>
+  </div>
+
+  <div class="sidebar-body">
+    <!-- Quick actions -->
+    <div class="quick-actions">
+      <div class="quick-action-bar">
+        <span>Quick actions</span>
+        <div class="kbd">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="4" width="4" height="3" rx="1" stroke="#a1a1a9" stroke-width="1"/><path d="M6 7V5.5a1.5 1.5 0 0 0-3 0" stroke="#a1a1a9" stroke-width="1" stroke-linecap="round"/><path d="M8 4h2M8 7h4" stroke="#a1a1a9" stroke-width="1" stroke-linecap="round"/></svg>
+          K
+        </div>
+      </div>
+      <div class="quick-action-search">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="#a1a1a9" stroke-width="1.2"/><path d="M10 10l2 2" stroke="#a1a1a9" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <!-- Nav items -->
+    <div class="nav-section">
+      <div class="nav-group">
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="#09090b" stroke-width="1.2"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="#09090b" stroke-width="1.2"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="#09090b" stroke-width="1.2"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="#09090b" stroke-width="1.2"/></svg></div>
+          Dashboard
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="2,11 5,7 8,9 11,5 14,7" stroke="#09090b" stroke-width="1.2" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+          Analytics
+          <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 7l2 2 2-2" stroke="#09090b" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#09090b" stroke-width="1.2"/><circle cx="8" cy="8" r="2" stroke="#09090b" stroke-width="1.2"/></svg></div>
+          Competitor Intelligence
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM3 14a5 5 0 0 1 10 0" stroke="#09090b" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+          Sentiments
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#09090b" stroke-width="1.2"/><path d="M8 2.5C8 2.5 10 5.5 10 8s-2 5.5-2 5.5M8 2.5C8 2.5 6 5.5 6 8s2 5.5 2 5.5M2.5 8h11" stroke="#09090b" stroke-width="1.2"/></svg></div>
+          Sources
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M3 8h7M3 11h5" stroke="#09090b" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+          Keywords
+          <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 7l2 2 2-2" stroke="#09090b" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="nav-item active">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3l1 3h3l-2.5 2 1 3L8 9.5 5.5 11l1-3L4 6h3z" stroke="#09090b" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+          Workflows
+          <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 7l2 2 2-2" stroke="#09090b" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="nav-item" style="padding-left:26px">
+          <div class="nav-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" fill="#09090b"/></svg></div>
+          Reddit
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1.5" stroke="#09090b" stroke-width="1.2"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="#09090b" stroke-width="1.2"/></svg></div>
+          Brand Kit
+          <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 7l2 2 2-2" stroke="#09090b" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage card -->
+    <div class="status-card">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="filter-group">
+          <div class="usage-row"><span class="usage-label">Prompt Responses</span><span class="usage-val">4.2K / 4.2K</span></div>
+          <div class="progress-track"><div class="progress-fill" style="width:74%;background:#fc84a7"></div></div>
+        </div>
+        <div class="filter-group">
+          <div class="usage-row"><span class="usage-label">Analytics Event</span><span class="usage-val">66K / 10M</span></div>
+          <div class="progress-track"><div class="progress-fill" style="width:1%;background:#a27afb"></div></div>
+        </div>
+      </div>
+      <div class="upgrade-btn">Upgrade to Enterprise</div>
+      <div class="reset-note">Usage will reset Feb 9, 2026</div>
+    </div>
+
+    <!-- Settings -->
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div class="section-label">Settings and Help</div>
+      <div class="nav-item">
+        <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#09090b" stroke-width="1.2"/><path d="M8 5v3l2 1" stroke="#09090b" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+        Help Center
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="#09090b" stroke-width="1.2"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1.1 1.1M11.1 11.1l1.1 1.1M3.8 12.2l1.1-1.1M11.1 4.9l1.1-1.1" stroke="#09090b" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+        Settings
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="profile-card">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar">RF</div>
+        <div class="profile-info">
+          <div class="profile-name">Rafi Rohmat</div>
+          <div class="profile-email">rafi@scaller.co</div>
+        </div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M7 8l3 3 3-3" stroke="#717179" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <span class="topbar-title">Workflows · Reddit</span>
+    <div class="topbar-actions">
+      <!-- page indicator shown in subtopbar -->
+    </div>
+  </div>
+
+  <!-- Sub-topbar: workflow steps -->
+  <div class="subtopbar">
+    <div class="ai-filter-group">
+      <span class="step-label">Step:</span>
+      <button class="ai-btn active" onclick="showPage('research',this)" id="step-research">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M10 10l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Thread Discovery
+      </button>
+      <button class="ai-btn" onclick="showPage('comment',this)" id="step-comment">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5l-3 2V4a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        Comment Writer
+      </button>
+      <button class="ai-btn" onclick="showPage('oppost',this)" id="step-oppost">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        OP Post Generator
+      </button>
+    </div>
+    <div class="topbar-actions">
+      <span style="font-size:12px;color:var(--color-text-tertiary)">Saved: 4 · Posted: 7</span>
+      <button class="topbar-btn-primary" onclick="showToast('Saved to backlog')">
+        Save workflow
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab bar (inside each page) -->
+  <div class="content">
+
+    <!-- PAGE 1: Thread Discovery -->
+    <div id="page-research" class="page active">
+      <div style="background:var(--color-surface-page);border-bottom:1px solid var(--color-border-strong);display:flex;align-items:flex-end;padding:0 24px;flex-shrink:0">
+        <div class="tab-item active" onclick="switchTab(this,'disc-tab','disc-gen-tab')">Discover existing threads</div>
+        <div class="tab-item" onclick="switchTab(this,'gen-tab','disc-gen-tab')">Generate topic ideas</div>
+      </div>
+
+      <!-- Discover tab -->
+      <div id="disc-tab" class="content-inner" style="flex-direction:column">
+        <div class="two-col" style="align-items:flex-start">
+
+          <!-- Filters -->
+          <div class="filter-panel">
+            <div class="filter-card">
+              <div class="filter-title">Filters</div>
+              <div class="filter-group">
+                <div class="filter-label">Goal type</div>
+                <label class="check-row"><input type="checkbox" checked> AI search visibility</label>
+                <label class="check-row"><input type="checkbox"> SEO visibility</label>
+                <label class="check-row"><input type="checkbox"> Community marketing</label>
+              </div>
+              <div class="filter-group">
+                <div class="filter-label">Subreddit</div>
+                <input class="filter-input" type="text" placeholder="e.g. r/SaaS">
+              </div>
+              <div class="filter-group">
+                <div class="filter-label">Keywords</div>
+                <input class="filter-input" type="text" placeholder="AI, SEO, tools...">
+              </div>
+              <div class="filter-group">
+                <div class="filter-label">Engagement level</div>
+                <select class="filter-select"><option>Low (&lt;50 comments)</option><option selected>Medium (50–200)</option><option>High (&gt;200)</option></select>
+              </div>
+              <div class="filter-group">
+                <div class="filter-label">Thread freshness</div>
+                <select class="filter-select"><option>Last 24h</option><option selected>Last 7 days</option><option>Last 30 days</option><option>All time</option></select>
+              </div>
+              <button class="apply-btn">Apply filters</button>
+            </div>
+          </div>
+
+          <!-- Thread list -->
+          <div class="thread-list">
+
+            <div class="card selected">
+              <div class="thread-row">
+                <div style="flex:1;min-width:0">
+                  <div class="thread-meta">
+                    <span class="chip chip-muted">r/SaaS</span>
+                    <span class="chip chip-muted">3 days ago</span>
+                    <span class="chip">open</span>
+                  </div>
+                  <div class="thread-title">What tools are you using to track AI search visibility? Profoundr and AirOps seem expensive</div>
+                  <div class="thread-desc">Thread discussing frustration with pricing of current AI SEO tools. Users looking for affordable alternatives with similar monitoring features.</div>
+                  <div class="thread-stats">
+                    <span>84 comments</span>
+                    <span>340 upvotes</span>
+                    <span>Top comment: 128 upvotes</span>
+                  </div>
+                  <div class="thread-meta" style="margin-top:8px">
+                    <span class="chip chip-red">Competitor: Profoundr</span>
+                    <span class="chip chip-red">Competitor: AirOps</span>
+                  </div>
+                </div>
+                <div class="thread-actions">
+                  <div style="display:flex;gap:6px">
+                    <button class="btn-ghost" onclick="showToast('Thread saved to backlog')">Save</button>
+                    <button class="btn-dark" onclick="showPage('comment',document.getElementById('step-comment'))">Write comment</button>
+                  </div>
+                  <button class="footer-link" onclick="showPage('oppost',document.getElementById('step-oppost'))">Create OP post →</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="thread-row">
+                <div style="flex:1;min-width:0">
+                  <div class="thread-meta">
+                    <span class="chip chip-muted">r/marketing</span>
+                    <span class="chip chip-muted">5 days ago</span>
+                    <span class="chip">open</span>
+                  </div>
+                  <div class="thread-title">Anyone getting real results from ChatGPT/Perplexity brand mentions? Sharing our 3-month experiment</div>
+                  <div class="thread-desc">Marketer shares experiment on improving brand visibility in AI-generated answers. High engagement, many asking for specific tactics.</div>
+                  <div class="thread-stats"><span>127 comments</span><span>891 upvotes</span><span>Top comment: 204 upvotes</span></div>
+                </div>
+                <div class="thread-actions">
+                  <div style="display:flex;gap:6px">
+                    <button class="btn-ghost" onclick="showToast('Thread saved')">Save</button>
+                    <button class="btn-dark" onclick="showPage('comment',document.getElementById('step-comment'))">Write comment</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="thread-row">
+                <div style="flex:1;min-width:0">
+                  <div class="thread-meta">
+                    <span class="chip chip-muted">r/SEO</span>
+                    <span class="chip chip-muted">1 week ago</span>
+                    <span class="chip">archived</span>
+                  </div>
+                  <div class="thread-title">Traditional SEO is dying — pivot to GEO (Generative Engine Optimization) or fall behind</div>
+                  <div class="thread-desc">Debate on the shift from traditional SEO to GEO. Mixed opinions. Strong opportunity to position as a solution bridging both worlds.</div>
+                  <div class="thread-stats"><span>203 comments</span><span>1.2k upvotes</span></div>
+                </div>
+                <div class="thread-actions">
+                  <div style="display:flex;gap:6px">
+                    <button class="btn-ghost" onclick="showToast('Thread saved')">Save</button>
+                    <button class="btn-dark" onclick="showPage('comment',document.getElementById('step-comment'))">Write comment</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate tab -->
+      <div id="gen-tab" class="content-inner" style="display:none">
+        <div class="idea-grid">
+          <div class="idea-card">
+            <div class="idea-meta"><span class="chip chip-muted">r/SaaS</span><span class="chip chip-muted">Pain point</span></div>
+            <div class="idea-title">Why are AI SEO tools still so expensive in 2025?</div>
+            <div class="idea-desc">Spark debate about pricing. Gap: no one has posted a direct pricing comparison of current tools.</div>
+            <div class="idea-footer">
+              <span class="idea-angle">Discussion angle</span>
+              <div class="idea-actions">
+                <button class="btn-ghost" onclick="showToast('Idea saved')">Save</button>
+                <button class="btn-dark" onclick="showPage('oppost',document.getElementById('step-oppost'))">Create post</button>
+              </div>
+            </div>
+          </div>
+          <div class="idea-card">
+            <div class="idea-meta"><span class="chip chip-muted">r/marketing</span><span class="chip chip-muted">Experience</span></div>
+            <div class="idea-title">We tracked AI mentions of our brand for 6 months — here's what we learned</div>
+            <div class="idea-desc">Share-worthy story post. Gap: very few marketers have shared transparent data on AI brand visibility experiments.</div>
+            <div class="idea-footer">
+              <span class="idea-angle">Case study angle</span>
+              <div class="idea-actions">
+                <button class="btn-ghost" onclick="showToast('Idea saved')">Save</button>
+                <button class="btn-dark" onclick="showPage('oppost',document.getElementById('step-oppost'))">Create post</button>
+              </div>
+            </div>
+          </div>
+          <div class="idea-card">
+            <div class="idea-meta"><span class="chip chip-muted">r/SEO</span><span class="chip chip-muted">Comparison</span></div>
+            <div class="idea-title">Google SEO vs GEO in 2025: which should you prioritize?</div>
+            <div class="idea-desc">Comparison-style post. Gap: no clear guide combining both perspectives for budget-constrained teams.</div>
+            <div class="idea-footer">
+              <span class="idea-angle">Advice angle</span>
+              <div class="idea-actions">
+                <button class="btn-ghost" onclick="showToast('Idea saved')">Save</button>
+                <button class="btn-dark" onclick="showPage('oppost',document.getElementById('step-oppost'))">Create post</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: Comment Writer -->
+    <div id="page-comment" class="page">
+      <div style="background:var(--color-surface-page);border-bottom:1px solid var(--color-border-strong);display:flex;align-items:flex-end;padding:0 24px;flex-shrink:0">
+        <div class="tab-item active">Comment Writer</div>
+      </div>
+      <div class="content-inner">
+        <div class="two-col" style="align-items:flex-start">
+
+          <!-- Settings -->
+          <div class="settings-panel">
+            <div class="settings-card">
+              <div class="settings-title">Thread context</div>
+              <div class="filter-group"><div class="settings-label">Reddit thread URL</div><input class="filter-input" type="url" placeholder="https://reddit.com/r/..."></div>
+              <div class="filter-group"><div class="settings-label">Comment goal</div><select class="filter-select"><option>Build brand awareness</option><option>Drive traffic</option><option>Establish expertise</option><option>Address competitor mention</option></select></div>
+              <div class="filter-group"><div class="settings-label">AI sentiment to leverage</div><select class="filter-select"><option>Frustration with competitors</option><option>Looking for alternatives</option><option>Seeking expert advice</option><option>Price sensitivity</option></select></div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Comment style</div>
+              <div class="pill-group">
+                <span class="pill active" onclick="togglePill(this)">Helpful expert</span>
+                <span class="pill" onclick="togglePill(this)">Personal story</span>
+                <span class="pill" onclick="togglePill(this)">Comparison</span>
+                <span class="pill" onclick="togglePill(this)">Educational</span>
+                <span class="pill" onclick="togglePill(this)">Short tip</span>
+                <span class="pill" onclick="togglePill(this)">Conversational</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Brand mention</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label class="radio-row"><input type="radio" name="mention"> <span style="font-size:13px">No mention</span></label>
+                <label class="radio-row"><input type="radio" name="mention" checked> <span style="font-size:13px">Soft mention</span></label>
+                <label class="radio-row"><input type="radio" name="mention"> <span style="font-size:13px">Indirect recommendation</span></label>
+                <label class="radio-row"><input type="radio" name="mention"> <span style="font-size:13px">Direct recommendation</span></label>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Tone</div>
+              <div class="pill-group">
+                <span class="pill active" onclick="togglePill(this)">Helpful</span>
+                <span class="pill" onclick="togglePill(this)">Casual</span>
+                <span class="pill" onclick="togglePill(this)">Analytical</span>
+                <span class="pill" onclick="togglePill(this)">Opinionated</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Length</div>
+              <div style="display:flex;gap:6px">
+                <span class="pill active" style="flex:1;text-align:center" onclick="exclPill(this,'clen')" data-g="clen">Short</span>
+                <span class="pill" style="flex:1;text-align:center" onclick="exclPill(this,'clen')" data-g="clen">Medium</span>
+                <span class="pill" style="flex:1;text-align:center" onclick="exclPill(this,'clen')" data-g="clen">Long</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Author profile</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+                <label class="radio-row"><input type="radio" name="author"> <span style="font-size:13px">Anonymous</span></label>
+                <label class="radio-row"><input type="radio" name="author" checked> <span style="font-size:13px">Team member</span></label>
+              </div>
+              <div class="author-card selected"><div class="author-avatar">JD</div><div><div class="author-name">u/jakeDev_</div><div class="author-role">Product manager</div></div></div>
+              <div class="author-card" style="margin-top:6px"><div class="author-avatar">SC</div><div><div class="author-name">u/sarah_clicks</div><div class="author-role">Sales engineer</div></div></div>
+            </div>
+            <button class="gen-btn" onclick="regen('comment-out')">Generate comments</button>
+          </div>
+
+          <!-- Output -->
+          <div class="output-area">
+            <div class="output-header">
+              <span class="output-count">Generated variations <span style="color:var(--color-text-tertiary)">3</span></span>
+              <button class="regen-btn" onclick="regen('comment-out')">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6A4.5 4.5 0 1 1 6 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 1.5h2.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Regenerate all
+              </button>
+            </div>
+            <div id="comment-out" style="display:flex;flex-direction:column;gap:10px;transition:opacity 0.3s">
+              <div class="output-card selected">
+                <div class="output-card-header">
+                  <div class="output-card-meta"><span class="chip chip-muted">Variation 1</span><span class="chip chip-muted">Helpful expert · Soft mention</span></div>
+                  <div class="output-card-actions"><button class="btn-ghost" onclick="showToast('Copied!')">Copy</button><button class="btn-dark" onclick="showToast('Saved')">Save</button></div>
+                </div>
+                <div class="output-text">We ran into the same issue last year. Honestly, the pricing on most AI visibility tools makes sense when you're at scale, but it's brutal for early-stage teams. We ended up building our own lightweight tracking — not the most elegant solution, but it worked. There are a few newer tools coming out that seem to be addressing this gap with more accessible pricing. Happy to share what we've found if that's helpful.</div>
+                <div class="output-footer"><button class="footer-link">Edit</button><button class="footer-link">Adjust tone</button><span class="word-count">~62 words</span></div>
+              </div>
+              <div class="output-card">
+                <div class="output-card-header">
+                  <div class="output-card-meta"><span class="chip chip-muted">Variation 2</span><span class="chip chip-muted">Personal story · No mention</span></div>
+                  <div class="output-card-actions"><button class="btn-ghost" onclick="showToast('Copied!')">Copy</button><button class="btn-dark" onclick="showToast('Saved')">Save</button></div>
+                </div>
+                <div class="output-text">The pricing thing is real. I spent three months evaluating five different tools and the ROI math just doesn't add up unless you're already doing serious volume. The honest answer is most of these tools are priced for agencies, not in-house teams with limited budgets. What's your current monthly AI search traffic volume?</div>
+                <div class="output-footer"><button class="footer-link">Edit</button><button class="footer-link">Adjust tone</button><span class="word-count">~58 words</span></div>
+              </div>
+              <div class="output-card">
+                <div class="output-card-header">
+                  <div class="output-card-meta"><span class="chip chip-muted">Variation 3</span><span class="chip chip-muted">Short tip · Indirect</span></div>
+                  <div class="output-card-actions"><button class="btn-ghost" onclick="showToast('Copied!')">Copy</button><button class="btn-dark" onclick="showToast('Saved')">Save</button></div>
+                </div>
+                <div class="output-text">Before paying for any of these, worth trying a manual audit first — just track what ChatGPT and Perplexity say about your category with 10–15 seed queries. Takes an afternoon but gives you a baseline without spending anything.</div>
+                <div class="output-footer"><button class="footer-link">Edit</button><button class="footer-link">Adjust tone</button><span class="word-count">~40 words</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: OP Post Generator -->
+    <div id="page-oppost" class="page">
+      <div style="background:var(--color-surface-page);border-bottom:1px solid var(--color-border-strong);display:flex;align-items:flex-end;padding:0 24px;flex-shrink:0">
+        <div class="tab-item active">OP Post Generator</div>
+      </div>
+      <div class="content-inner">
+        <div class="two-col" style="align-items:flex-start">
+
+          <!-- Settings -->
+          <div class="settings-panel">
+            <div class="settings-card">
+              <div class="settings-title">Topic</div>
+              <div class="filter-group"><div class="settings-label">Thread idea</div><select class="filter-select"><option>From saved ideas...</option><option selected>Why are AI SEO tools so expensive?</option><option>6-month brand tracking experiment</option><option>Google SEO vs GEO comparison</option></select></div>
+              <div class="filter-group"><div class="settings-label">Target subreddit</div><input class="filter-input" type="text" value="r/SaaS"></div>
+              <div class="sub-info">
+                <div class="sub-name">r/SaaS</div>
+                <div class="sub-desc">For SaaS founders, marketers, and operators. 480k members. Favors actionable content and real experience.</div>
+                <div class="sub-divider"></div>
+                <div class="sub-rules-label">Rules to note</div>
+                <div class="sub-rules">No direct self-promotion. Experience posts must be genuine. Mark case studies clearly.</div>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Post style</div>
+              <div class="pill-group">
+                <span class="pill" onclick="togglePill(this)">Ask for advice</span>
+                <span class="pill" onclick="togglePill(this)">Share experience</span>
+                <span class="pill active" onclick="togglePill(this)">Start a debate</span>
+                <span class="pill" onclick="togglePill(this)">Comparison</span>
+                <span class="pill" onclick="togglePill(this)">Insight share</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Tone</div>
+              <div class="pill-group">
+                <span class="pill active" onclick="togglePill(this)">Casual</span>
+                <span class="pill" onclick="togglePill(this)">Curious</span>
+                <span class="pill" onclick="togglePill(this)">Honest</span>
+                <span class="pill" onclick="togglePill(this)">Analytical</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Author profile</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+                <label class="radio-row"><input type="radio" name="op-author"> <span style="font-size:13px">Anonymous</span></label>
+                <label class="radio-row"><input type="radio" name="op-author" checked> <span style="font-size:13px">Team member</span></label>
+              </div>
+              <div class="author-card selected"><div class="author-avatar">JD</div><div><div class="author-name">u/jakeDev_</div><div class="author-role">Product manager · 4yr account</div></div></div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-title">Length</div>
+              <div style="display:flex;gap:6px">
+                <span class="pill active" style="flex:1;text-align:center" onclick="exclPill(this,'plen')" data-g="plen">Short</span>
+                <span class="pill" style="flex:1;text-align:center" onclick="exclPill(this,'plen')" data-g="plen">Medium</span>
+                <span class="pill" style="flex:1;text-align:center" onclick="exclPill(this,'plen')" data-g="plen">Story</span>
+              </div>
+            </div>
+            <button class="gen-btn" onclick="regen('post-out')">Generate posts</button>
+          </div>
+
+          <!-- Output -->
+          <div class="output-area">
+            <div class="output-header">
+              <span class="output-count">Generated variations <span style="color:var(--color-text-tertiary)">3</span></span>
+              <button class="regen-btn" onclick="regen('post-out')">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6A4.5 4.5 0 1 1 6 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 1.5h2.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Regenerate all
+              </button>
+            </div>
+            <div id="post-out" style="display:flex;flex-direction:column;gap:10px;transition:opacity 0.3s">
+              <div class="output-card selected">
+                <div class="output-card-header">
+                  <div class="output-card-meta"><span class="chip chip-muted">Variation 1</span><span class="chip chip-muted">Debate starter · Casual</span></div>
+                  <div class="output-card-actions"><button class="btn-ghost" onclick="showToast('Copied!')">Copy</button><button class="btn-dark" onclick="showToast('Saved')">Save</button></div>
+                </div>
+                <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px">Am I the only one who thinks AI SEO tools are priced completely wrong right now?</div>
+                <div class="output-text">Looking at tools like Profoundr, AirOps, etc. — I genuinely can't figure out the pricing logic. They're clearly targeting agencies or enterprise, but that leaves a huge gap for in-house marketing teams. Is anyone actually seeing ROI at these price points, or are we all just doing manual tracking in spreadsheets?</div>
+                <div class="output-footer"><button class="footer-link">Edit</button><button class="footer-link">Adjust tone</button><span class="word-count">~57 words</span></div>
+              </div>
+              <div class="output-card">
+                <div class="output-card-header">
+                  <div class="output-card-meta"><span class="chip chip-muted">Variation 2</span><span class="chip chip-muted">Advice ask · Honest</span></div>
+                  <div class="output-card-actions"><button class="btn-ghost" onclick="showToast('Copied!')">Copy</button><button class="btn-dark" onclick="showToast('Saved')">Save</button></div>
+                </div>
+                <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px">How are you tracking whether ChatGPT and Perplexity are recommending your product? Genuinely asking</div>
+                <div class="output-text">We're trying to build a consistent process for this but everything feels ad-hoc. Currently running manual queries weekly and logging results in a spreadsheet. Curious what people in this sub are actually doing before committing to a paid solution.</div>
+                <div class="output-footer"><button class="footer-link">Edit</button><button class="footer-link">Adjust tone</button><span class="word-count">~44 words</span></div>
+              </div>
+              <div class="output-card">
+                <div class="output-card-header">
+                  <div class="output-card-meta"><span class="chip chip-muted">Variation 3</span><span class="chip chip-muted">Insight share · Curious</span></div>
+                  <div class="output-card-actions"><button class="btn-ghost" onclick="showToast('Copied!')">Copy</button><button class="btn-dark" onclick="showToast('Saved')">Save</button></div>
+                </div>
+                <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px">Tested which subreddits are most likely to get picked up by AI search engines — interesting results</div>
+                <div class="output-text">Spent the last few weeks posting variations of the same SaaS topic across r/SaaS, r/marketing, r/SEO, and r/startups, then tracked which posts appeared in ChatGPT and Perplexity results over 30 days. The gap between subreddits was surprisingly large. Happy to share the breakdown if anyone's interested.</div>
+                <div class="output-footer"><button class="footer-link">Edit</button><button class="footer-link">Adjust tone</button><span class="word-count">~55 words</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+</div><!-- end .main -->
+
+<!-- Toast -->
+<div id="toast">
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.ai-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function switchTab(tab, showId, hideId) {
+  const siblings = tab.parentElement.querySelectorAll('.tab-item');
+  siblings.forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+
+  const parent = tab.closest('.page');
+  parent.querySelectorAll('.content-inner, #gen-tab, #disc-tab').forEach(el => {
+    el.style.display = 'none';
+  });
+  const target = document.getElementById(showId);
+  if (target) target.style.display = 'flex';
+}
+
+function togglePill(el) { el.classList.toggle('active'); }
+
+function exclPill(el, group) {
+  document.querySelectorAll('[data-g="' + group + '"]').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function regen(id) {
+  const el = document.getElementById(id);
+  el.classList.add('loading');
+  setTimeout(() => {
+    el.classList.remove('loading');
+    showToast('New variations generated');
+  }, 1100);
+}
+
+// Init disc-tab visible
+document.getElementById('disc-tab').style.display = 'flex';
+document.getElementById('gen-tab').style.display = 'none';
+</script>
+</body>
+</html>
