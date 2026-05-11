@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thread Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f4f4f5; --surface: #fff; --border: #e4e4e7; --border-sub: #f0f0f0;
+  --text: #09090b; --text-2: #3f3f46; --text-3: #71717a; --text-4: #a1a1aa;
+  --accent: #09090b;
+  --green: #16a34a; --green-bg: #f0fdf4; --green-bd: #bbf7d0;
+  --red: #dc2626; --red-bg: #fef2f2; --red-bd: #fca5a5;
+  --amber: #d97706; --amber-bg: #fffbeb; --amber-bd: #fde68a;
+  --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-bd: #ddd6fe;
+  --blue: #2563eb; --blue-bg: #eff6ff; --blue-bd: #bfdbfe;
+  --new-bg: #fefce8; --new-bd: #fef08a;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
+
+/* ── Topbar ── */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; }
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.logo { width: 26px; height: 26px; border-radius: 6px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.breadcrumb { font-size: 13px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+.breadcrumb b { color: var(--text); font-weight: 500; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.btn-ghost { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 12px; font-size: 13px; font-weight: 500; color: var(--text-2); font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn-ghost:hover { background: var(--bg); }
+
+/* ── Shell ── */
+.shell { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar { width: 210px; min-width: 210px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; padding: 10px 8px; gap: 2px; }
+.nav-label { font-size: 10.5px; font-weight: 600; color: var(--text-4); letter-spacing: 0.07em; text-transform: uppercase; padding: 8px 8px 4px; }
+.nav-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text-3); cursor: pointer; }
+.nav-item:hover { background: var(--bg); color: var(--text-2); }
+.nav-item.active { background: var(--bg); color: var(--text); }
+.nav-sub { padding-left: 24px; font-size: 12.5px; }
+.sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+.user-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.user-avatar { width: 28px; height: 28px; border-radius: 50%; background: #e4e4e7; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text-2); flex-shrink: 0; }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Input bar ── */
+.input-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 20px; flex-shrink: 0; }
+.input-bar-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.input-bar-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.input-bar-desc { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+.seed-input-wrap { display: flex; align-items: center; gap: 10px; }
+.seed-input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 14px; font-size: 13px;
+  font-family: inherit; color: var(--text); outline: none;
+  transition: border-color 0.15s;
+}
+.seed-input:focus { border-color: #a1a1aa; background: var(--surface); }
+.seed-input::placeholder { color: var(--text-4); }
+
+.mode-tabs { display: flex; gap: 6px; }
+.mode-tab { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text-3); cursor: pointer; font-family: inherit; background: var(--surface); display: flex; align-items: center; gap: 5px; transition: all 0.1s; }
+.mode-tab:hover { border-color: #a1a1aa; color: var(--text-2); }
+.mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.btn-find { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 7px; white-space: nowrap; flex-shrink: 0; }
+.btn-find:hover { opacity: 0.88; }
+.btn-find svg { flex-shrink: 0; }
+
+/* ── Filter bar ── */
+.filter-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+.filter-drop { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; background: var(--surface); font-family: inherit; white-space: nowrap; }
+.filter-drop:hover { background: var(--bg); }
+.filter-drop.active { border-color: var(--accent); background: #fafafa; color: var(--text); }
+.filter-sep { flex: 1; }
+.filter-clear { font-size: 12px; color: var(--text-3); cursor: pointer; padding: 5px 8px; border-radius: 6px; }
+.filter-clear:hover { background: var(--bg); color: var(--text-2); }
+.view-toggle { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 2px; }
+.view-btn { width: 26px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-3); }
+.view-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.results-count { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+
+/* ── Table ── */
+.table-wrap { flex: 1; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead { position: sticky; top: 0; z-index: 2; }
+thead tr { background: var(--bg); border-bottom: 1px solid var(--border); }
+th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; user-select: none; }
+th:hover { color: var(--text-2); }
+th .sort { opacity: 0.4; margin-left: 3px; }
+tbody tr { border-bottom: 1px solid var(--border-sub); background: var(--surface); transition: background 0.08s; cursor: pointer; }
+tbody tr:hover { background: #fafafa; }
+tbody tr.new-row { background: var(--new-bg); }
+tbody tr.new-row:hover { background: #fef9c3; }
+tbody tr.archived-row { background: var(--amber-bg); }
+tbody tr.archived-row:hover { background: #fef3c7; }
+td { padding: 10px 12px; vertical-align: middle; }
+
+
+/* Thread title cell */
+.thread-title-cell { max-width: 340px; }
+.thread-title-text { font-size: 13px; font-weight: 500; color: var(--text); line-height: 18px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.thread-sub-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+
+/* Badges */
+.badge { font-size: 10.5px; font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+.badge-new { background: var(--new-bg); border: 1px solid var(--new-bd); color: #854d0e; }
+.badge-open { background: var(--green-bg); border: 1px solid var(--green-bd); color: var(--green); }
+.badge-archived { background: var(--amber-bg); border: 1px solid var(--amber-bd); color: var(--amber); }
+.badge-sub { background: var(--bg); border: 1px solid var(--border); color: var(--text-3); font-weight: 500; }
+
+/* Sentiment */
+.sentiment { font-size: 11.5px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+.s-pos { color: var(--green); }
+.s-neg { color: var(--red); }
+.s-mix { color: var(--amber); }
+.s-neu { color: var(--text-3); }
+
+/* Competitor avatars */
+.comp-row { display: flex; align-items: center; gap: 4px; }
+.comp-avatar { width: 20px; height: 20px; border-radius: 50%; background: #e4e4e7; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: var(--text-3); border: 1.5px solid var(--surface); }
+.comp-more { font-size: 11px; color: var(--text-3); }
+
+/* AI models */
+.ai-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.ai-badge { font-size: 10px; font-weight: 500; padding: 1px 6px; border-radius: 99px; background: var(--purple-bg); border: 1px solid var(--purple-bd); color: var(--purple); }
+
+/* Brand mention */
+.brand-yes { color: var(--green); font-weight: 600; font-size: 12px; }
+.brand-no { color: var(--text-4); font-size: 12px; }
+
+/* Actions col */
+.actions-col { white-space: nowrap; }
+.btn-write { padding: 4px 10px; border-radius: 5px; font-size: 11.5px; font-weight: 500; font-family: inherit; cursor: pointer; background: var(--accent); color: #fff; border: none; }
+.btn-save { padding: 4px 10px; border-radius: 5px; font-size: 11.5px; font-weight: 500; font-family: inherit; cursor: pointer; background: none; border: 1px solid var(--border); color: var(--text-2); margin-right: 4px; }
+.btn-op { padding: 4px 10px; border-radius: 5px; font-size: 11.5px; font-weight: 500; font-family: inherit; cursor: pointer; background: none; border: 1px solid var(--amber-bd); color: var(--amber); }
+
+/* Stats col */
+.stat-val { font-size: 13px; font-weight: 500; color: var(--text); }
+.stat-label { font-size: 11px; color: var(--text-3); }
+
+/* ── Card view (feed style) ── */
+.card-wrap { flex: 1; overflow-y: auto; display: none; }
+.feed-card {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
+  cursor: pointer; transition: background 0.08s;
+}
+.feed-card:hover { background: #fafafa; }
+.feed-card.new-card { background: var(--new-bg); }
+.feed-card.new-card:hover { background: #fef9c3; }
+.feed-card.archived-card { background: var(--amber-bg); }
+.feed-card.archived-card:hover { background: #fef3c7; }
+.feed-card-top { display: flex; align-items: center; justify-content: space-between; }
+.feed-card-top-left { display: flex; align-items: center; gap: 7px; }
+.feed-card-top-right { display: flex; align-items: center; gap: 6px; }
+.feed-icon-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); }
+.feed-icon-btn:hover { background: var(--bg); color: var(--text-2); }
+.feed-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 21px; }
+.feed-desc { font-size: 12.5px; color: var(--text-3); line-height: 18px; }
+.feed-stats { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-3); }
+.feed-stat { display: flex; align-items: center; gap: 4px; }
+.feed-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--text-3); }
+.feed-meta-item { display: flex; align-items: center; gap: 4px; }
+.feed-meta-label { color: var(--text-3); }
+.feed-meta-val { font-weight: 500; }
+.feed-meta-sep { color: var(--border); }
+.feed-archived-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff8f0; border: 1px solid var(--amber-bd);
+  border-radius: 7px; padding: 8px 12px; gap: 10px;
+}
+.feed-archived-text { font-size: 12px; color: var(--amber); flex: 1; line-height: 16px; }
+.btn-op-dark { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer; background: var(--accent); color: #fff; border: none; display: flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0; }
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 48px; }
+.empty-icon { width: 52px; height: 52px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.empty-desc { font-size: 13px; color: var(--text-3); text-align: center; max-width: 320px; line-height: 20px; }
+
+/* Loading skeleton */
+@keyframes shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+.sk { background: linear-gradient(90deg,#ebebeb 25%,#f5f5f5 50%,#ebebeb 75%); background-size:600px 100%; animation:shimmer 1.4s infinite; border-radius:4px; display:inline-block; }
+
+/* Toast */
+#toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--accent);color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;opacity:0;transition:all 0.2s;pointer-events:none;z-index:999;white-space:nowrap; }
+#toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">S</div>
+    <div class="breadcrumb">
+      Workflows <span style="color:var(--text-4)">·</span>
+      Reddit <span style="color:var(--text-4)">·</span>
+      <b>Thread Discovery</b>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn-ghost" onclick="toast('Exporting...')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v8M4 7l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Export
+    </button>
+    <button class="btn-ghost" onclick="toast('Saving to database...')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h8l2 2v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 2v4h6V2M4 8h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Save all
+    </button>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="nav-item" onclick="toast('Dashboard')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="toast('Analytics')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 10l3.5-4 3 2.5L11 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Analytics
+    </div>
+    <div class="nav-item" onclick="toast('Sources')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 7h6M7 4v6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Sources
+    </div>
+    <div class="nav-item" onclick="toast('Keywords')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Keywords
+    </div>
+    <div class="nav-label" style="margin-top:6px">Workflows</div>
+    <div class="nav-item" style="padding-left:8px;font-weight:600;font-size:13px">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--text);flex-shrink:0;display:block"></span>
+      Reddit
+    </div>
+    <div class="nav-item nav-sub" onclick="toast('Reddit Hub')">Hub</div>
+    <div class="nav-item nav-sub active">Thread Discovery</div>
+    <div class="nav-item nav-sub" onclick="toast('Thread Monitor')">Thread Monitor</div>
+    <div class="nav-item nav-sub" onclick="toast('OP Post Generator')">OP Post Generator</div>
+    <div class="nav-label" style="margin-top:6px">Brand</div>
+    <div class="nav-item" onclick="toast('Brand Kit')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 7h4M7 5v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Brand Kit
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-avatar">RF</div>
+        <div>
+          <div style="font-size:12px;font-weight:500;color:var(--text)">Rafi Rohmat</div>
+          <div style="font-size:11px;color:var(--text-3)">rafi@scaller.co</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Input bar -->
+    <div class="input-bar">
+      <div style="margin-bottom:12px">
+        <div class="input-bar-title">Thread Discovery</div>
+        <div class="input-bar-desc">Find and monitor Reddit threads worth engaging in.</div>
+      </div>
+
+      <!-- Mode tabs -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:500;color:var(--text-3)">Mode</span>
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="mode-kw" onclick="setMode('kw')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.1"/><path d="M8 8l2 2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            Keyword targeting
+          </button>
+          <button class="mode-tab" id="mode-ai" onclick="setMode('ai')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1 2.5 2.5 1-2.5 1L6 8l-1-2.5L2.5 4.5l2.5-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+            AI search pull
+          </button>
+        </div>
+        <span id="mode-desc" style="font-size:12px;color:var(--text-3)">Search Reddit threads by keyword from your keyword list</span>
+      </div>
+
+      <!-- Seed input + Find button -->
+      <div class="seed-input-wrap">
+        <input class="seed-input" id="seed-input" type="text"
+          placeholder="Enter seed keywords separated by commas (e.g. AI SEO tools, GEO optimization, Perplexity ranking...)">
+        <button class="btn-find" onclick="runSearch()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M6 1l1.2 3L10 4.2l-2.2 2 .8 3.2L6 8l-2.6 1.4.8-3.2L2 4.2l2.8-.8z" fill="white"/></svg>
+          Find Threads
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter bar (shown after results) -->
+    <div class="filter-bar" id="filter-bar" style="display:none">
+      <button class="filter-drop active" onclick="toast('Goal type filter')">
+        Goal type <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="filter-drop" onclick="toast('Subreddit filter')">
+        Subreddit <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="filter-drop active" onclick="toast('Comments filter')">
+        Comments: 20–300 <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="filter-drop" onclick="toast('Sentiment filter')">
+        Sentiment <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="filter-drop" onclick="toast('Date range filter')">
+        Date range: 7 days <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="filter-drop" onclick="toast('Competitors filter')">
+        Competitors <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="filter-drop" onclick="toast('AI Models filter')">
+        AI Models <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="filter-sep"></div>
+      <span class="results-count" id="results-count">24 threads found</span>
+      <span class="filter-clear" onclick="toast('Filters cleared')">Clear all</span>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-row" title="Row view" onclick="switchView('row')">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 3h11M1 6.5h11M1 10h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="view-btn" id="btn-card" title="Card view" onclick="switchView('card')">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="9.5" cy="9.5" r="6.5" stroke="#a1a1aa" stroke-width="1.5"/><path d="M16 16l4 4" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round"/><path d="M7 9.5h5M9.5 7v5" stroke="#a1a1aa" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div class="empty-title">No threads yet</div>
+      <div class="empty-desc">Enter seed keywords above and click <strong>Find Threads</strong> to discover Reddit threads worth engaging in.</div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="empty-state" id="loading-state" style="display:none">
+      <div class="empty-icon" style="background:var(--accent)">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="7" stroke="white" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="11" cy="11" r="3" fill="white"/></svg>
+      </div>
+      <div class="empty-title">Finding threads...</div>
+      <div class="empty-desc">Scanning Reddit for threads matching your keywords and goal type.</div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <div class="sk" style="height:8px;width:180px"></div>
+      </div>
+    </div>
+
+    <!-- Results table -->
+    <div class="table-wrap" id="table-wrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:300px">Thread <span class="sort">↕</span></th>
+            <th>Subreddit <span class="sort">↕</span></th>
+            <th>Status</th>
+            <th>💬 <span class="sort">↕</span></th>
+            <th>↑ <span class="sort">↕</span></th>
+            <th>Sentiment</th>
+            <th>Competitors</th>
+            <th>AI Models</th>
+            <th>Brand</th>
+            <th>Found</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+
+          <!-- Row 1: NEW, open -->
+          <tr class="new-row">
+            <td class="thread-title-cell">
+              <div style="display:flex;align-items:flex-start;gap:6px">
+                <span class="badge badge-new">NEW</span>
+                <div>
+                  <div class="thread-title-text">What tools are you using to track AI search visibility? Profoundr and AirOps seem expensive</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/SaaS</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">84</span></td>
+            <td><span class="stat-val">340</span></td>
+            <td><span class="sentiment s-neg">● Frustrated</span></td>
+            <td>
+              <div class="comp-row">
+                <div class="comp-avatar" title="Profoundr" style="background:#fee2e2;color:#991b1b">P</div>
+                <div class="comp-avatar" title="AirOps" style="background:#fef3c7;color:#92400e">A</div>
+              </div>
+            </td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">Perplexity</span>
+                <span class="ai-badge">ChatGPT</span>
+              </div>
+            </td>
+            <td><span class="brand-no">—</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">Just now</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+          <!-- Row 2: NEW, open, brand mention -->
+          <tr class="new-row">
+            <td class="thread-title-cell">
+              <div style="display:flex;align-items:flex-start;gap:6px">
+                <span class="badge badge-new">NEW</span>
+                <div>
+                  <div class="thread-title-text">Scaller vs AirOps — has anyone tried both? Looking for honest comparison</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/SaaS</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">31</span></td>
+            <td><span class="stat-val">47</span></td>
+            <td><span class="sentiment s-pos">● Evaluating</span></td>
+            <td>
+              <div class="comp-row">
+                <div class="comp-avatar" title="AirOps" style="background:#fef3c7;color:#92400e">A</div>
+              </div>
+            </td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">ChatGPT</span>
+              </div>
+            </td>
+            <td><span class="brand-yes">Yes</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">Just now</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+          <!-- Row 3: open, positive -->
+          <tr>
+            <td class="thread-title-cell">
+              <div>
+                <div class="thread-title-text">Anyone getting real results from ChatGPT/Perplexity brand mentions? Sharing our 3-month experiment</div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/marketing</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">127</span></td>
+            <td><span class="stat-val">891</span></td>
+            <td><span class="sentiment s-pos">● Positive</span></td>
+            <td><span class="brand-no">—</span></td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">Perplexity</span>
+                <span class="ai-badge">ChatGPT</span>
+                <span class="ai-badge">Gemini</span>
+              </div>
+            </td>
+            <td><span class="brand-no">—</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">5 days ago</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+          <!-- Row 4: ARCHIVED -->
+          <tr class="archived-row">
+            <td class="thread-title-cell">
+              <div style="display:flex;align-items:flex-start;gap:6px">
+                <div>
+                  <div class="thread-title-text">Traditional SEO is dying — pivot to GEO (Generative Engine Optimization) or fall behind</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/SEO</span></td>
+            <td><span class="badge badge-archived">Archived</span></td>
+            <td><span class="stat-val">203</span></td>
+            <td><span class="stat-val">1.2k</span></td>
+            <td><span class="sentiment s-mix">● Mixed</span></td>
+            <td><span class="brand-no">—</span></td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">Gemini</span>
+              </div>
+            </td>
+            <td><span class="brand-no">—</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">1 week ago</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-op" onclick="toast('Opening OP Post Generator...')">Create OP post</button>
+            </td>
+          </tr>
+
+          <!-- Row 5 -->
+          <tr>
+            <td class="thread-title-cell">
+              <div>
+                <div class="thread-title-text">How to get your SaaS mentioned in ChatGPT answers — step by step guide</div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/SaaS</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">64</span></td>
+            <td><span class="stat-val">512</span></td>
+            <td><span class="sentiment s-pos">● Positive</span></td>
+            <td><span class="brand-no">—</span></td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">ChatGPT</span>
+              </div>
+            </td>
+            <td><span class="brand-no">—</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">3 days ago</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+          <!-- Row 6 -->
+          <tr>
+            <td class="thread-title-cell">
+              <div>
+                <div class="thread-title-text">Is Perplexity actually useful for B2B marketing research? My honest take after 3 months</div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/marketing</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">89</span></td>
+            <td><span class="stat-val">673</span></td>
+            <td><span class="sentiment s-mix">● Mixed</span></td>
+            <td><span class="brand-no">—</span></td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">Perplexity</span>
+              </div>
+            </td>
+            <td><span class="brand-no">—</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">4 days ago</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+          <!-- Row 7: negative, brand mention -->
+          <tr>
+            <td class="thread-title-cell">
+              <div>
+                <div class="thread-title-text">Anyone else frustrated with GEO tools lack of reporting? Scaller's dashboard feels incomplete</div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/SaaS</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">18</span></td>
+            <td><span class="stat-val">94</span></td>
+            <td><span class="sentiment s-neg">● Negative</span></td>
+            <td><span class="brand-no">—</span></td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">ChatGPT</span>
+              </div>
+            </td>
+            <td><span class="brand-yes">Yes</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">2 days ago</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+          <!-- Row 8 -->
+          <tr>
+            <td class="thread-title-cell">
+              <div>
+                <div class="thread-title-text">Best tools for tracking AI search visibility in 2025? Comparing 8 options</div>
+              </div>
+            </td>
+            <td><span class="badge badge-sub">r/marketing</span></td>
+            <td><span class="badge badge-open">Open</span></td>
+            <td><span class="stat-val">56</span></td>
+            <td><span class="stat-val">210</span></td>
+            <td><span class="sentiment s-mix">● Mixed</span></td>
+            <td>
+              <div class="comp-row">
+                <div class="comp-avatar" title="Profoundr" style="background:#fee2e2;color:#991b1b">P</div>
+                <div class="comp-avatar" title="AirOps" style="background:#fef3c7;color:#92400e">A</div>
+                <span class="comp-more">+3</span>
+              </div>
+            </td>
+            <td>
+              <div class="ai-row">
+                <span class="ai-badge">Perplexity</span>
+                <span class="ai-badge">ChatGPT</span>
+              </div>
+            </td>
+            <td><span class="brand-yes">Yes</span></td>
+            <td style="font-size:11px;color:var(--text-3);white-space:nowrap">1 day ago</td>
+            <td class="actions-col">
+              <button class="btn-save" onclick="toast('Saved!')">Save</button>
+              <button class="btn-write" onclick="toast('Opening Comment Writer...')">Write comment</button>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div><!-- end table-wrap -->
+
+    <!-- Card view (feed style) -->
+    <div class="card-wrap" id="card-wrap">
+
+      <!-- Card 1: NEW open, competitor -->
+      <div class="feed-card new-card">
+        <div class="feed-card-top">
+          <div class="feed-card-top-left">
+            <span class="badge badge-new">NEW</span>
+            <span class="badge badge-open">Open</span>
+          </div>
+          <div class="feed-card-top-right">
+            <button class="feed-icon-btn" title="Save" onclick="toast('Saved!')">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9v10l-4.5-2.5L2 12V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="feed-icon-btn" title="Write comment" onclick="toast('Opening Comment Writer...')">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 1.5l2 2L4 10H2V8L8.5 1.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="feed-title">What tools are you using to track AI search visibility? Profoundr and AirOps seem expensive</div>
+        <div class="feed-desc">Frustration with pricing of current AI SEO tools, users actively looking for affordable alternatives with similar monitoring features.</div>
+        <div class="feed-stats">
+          <span class="feed-stat">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5l-3.5 2.5V3.5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+            84 Comments
+          </span>
+          <span class="feed-stat">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M3 5.5l3.5-3.5 3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            340 Votes
+          </span>
+        </div>
+        <div class="feed-meta">
+          <span class="feed-meta-item">
+            <span class="feed-meta-label">Brand Mentioned :</span>
+            <span class="feed-meta-val brand-no">No</span>
+          </span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item">
+            <span class="feed-meta-label">Sentiment :</span>
+            <span class="feed-meta-val"><span class="sentiment s-neg">Negative</span></span>
+          </span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item">
+            <span class="feed-meta-label">Competitor :</span>
+            <div class="comp-row">
+              <div class="comp-avatar" title="Profoundr" style="background:#fee2e2;color:#991b1b">P</div>
+              <div class="comp-avatar" title="AirOps" style="background:#fef3c7;color:#92400e">A</div>
+            </div>
+          </span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item">
+            <span class="feed-meta-label">AI Models :</span>
+            <div class="ai-row"><span class="ai-badge">Perplexity</span><span class="ai-badge">ChatGPT</span></div>
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 2: ARCHIVED -->
+      <div class="feed-card archived-card">
+        <div class="feed-card-top">
+          <div class="feed-card-top-left">
+            <span class="badge badge-archived">Archived</span>
+          </div>
+          <div class="feed-card-top-right">
+            <button class="feed-icon-btn" title="Save" onclick="toast('Saved!')">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9v10l-4.5-2.5L2 12V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="feed-title">Traditional SEO is dying — pivot to GEO (Generative Engine Optimization) or fall behind</div>
+        <div class="feed-desc">Debate on the shift from traditional SEO to GEO. Mixed opinions. Strong opportunity to position as a solution bridging both worlds.</div>
+        <div class="feed-stats">
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5l-3.5 2.5V3.5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg> 203 Comments</span>
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M3 5.5l3.5-3.5 3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 1.2k Votes</span>
+        </div>
+        <div class="feed-archived-banner">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0"><circle cx="7" cy="7" r="5.5" stroke="#d97706" stroke-width="1.2"/><path d="M7 4.5v3" stroke="#d97706" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.5" r="0.6" fill="#d97706"/></svg>
+          <span class="feed-archived-text">This thread is archived. Create a new OP post on this topic to start a fresh conversation.</span>
+          <button class="btn-op-dark" onclick="toast('Opening OP Post Generator...')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2L4 10H2V8L8.5 1.5z" stroke="white" stroke-width="1.1" stroke-linejoin="round"/></svg>
+            Create OP Post
+          </button>
+        </div>
+        <div class="feed-meta">
+          <span class="feed-meta-item"><span class="feed-meta-label">Brand Mentioned :</span><span class="feed-meta-val brand-no">No</span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Sentiment :</span><span class="feed-meta-val"><span class="sentiment s-pos">Positive</span></span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Competitor :</span><div class="comp-row"><div class="comp-avatar" title="AirOps" style="background:#fef3c7;color:#92400e">A</div></div></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">AI Models :</span><div class="ai-row"><span class="ai-badge">Gemini</span></div></span>
+        </div>
+      </div>
+
+      <!-- Card 3: open positive -->
+      <div class="feed-card">
+        <div class="feed-card-top">
+          <div class="feed-card-top-left"><span class="badge badge-open">Open</span></div>
+          <div class="feed-card-top-right">
+            <button class="feed-icon-btn" title="Save" onclick="toast('Saved!')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9v10l-4.5-2.5L2 12V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="feed-icon-btn" title="Write comment" onclick="toast('Opening Comment Writer...')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 1.5l2 2L4 10H2V8L8.5 1.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="feed-title">Anyone getting real results from ChatGPT/Perplexity brand mentions? Sharing our 3-month experiment</div>
+        <div class="feed-desc">Marketer shares experiment on improving brand visibility in AI-generated answers. High engagement, many asking for specific tactics.</div>
+        <div class="feed-stats">
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5l-3.5 2.5V3.5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg> 127 Comments</span>
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M3 5.5l3.5-3.5 3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 891 Votes</span>
+        </div>
+        <div class="feed-meta">
+          <span class="feed-meta-item"><span class="feed-meta-label">Brand Mentioned :</span><span class="feed-meta-val brand-no">No</span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Sentiment :</span><span class="feed-meta-val"><span class="sentiment s-pos">Positive</span></span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Competitor :</span><span class="feed-meta-val brand-no">—</span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">AI Models :</span><div class="ai-row"><span class="ai-badge">Perplexity</span><span class="ai-badge">ChatGPT</span><span class="ai-badge">Gemini</span></div></span>
+        </div>
+      </div>
+
+      <!-- Card 4: open, negative, brand mention -->
+      <div class="feed-card">
+        <div class="feed-card-top">
+          <div class="feed-card-top-left"><span class="badge badge-open">Open</span></div>
+          <div class="feed-card-top-right">
+            <button class="feed-icon-btn" title="Save" onclick="toast('Saved!')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9v10l-4.5-2.5L2 12V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="feed-icon-btn" title="Write comment" onclick="toast('Opening Comment Writer...')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 1.5l2 2L4 10H2V8L8.5 1.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="feed-title">Anyone else frustrated with GEO tools lack of reporting? Scaller's dashboard feels incomplete</div>
+        <div class="feed-desc">Users frustrated with lack of proper analytics in GEO tools. Strong opportunity to address objections and highlight reporting features.</div>
+        <div class="feed-stats">
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5l-3.5 2.5V3.5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg> 18 Comments</span>
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M3 5.5l3.5-3.5 3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 94 Votes</span>
+        </div>
+        <div class="feed-meta">
+          <span class="feed-meta-item"><span class="feed-meta-label">Brand Mentioned :</span><span class="feed-meta-val brand-yes">Yes</span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Sentiment :</span><span class="feed-meta-val"><span class="sentiment s-neg">Negative</span></span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Competitor :</span><span class="feed-meta-val brand-no">—</span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">AI Models :</span><div class="ai-row"><span class="ai-badge">ChatGPT</span></div></span>
+        </div>
+      </div>
+
+      <!-- Card 5: open, evaluating, brand mention -->
+      <div class="feed-card">
+        <div class="feed-card-top">
+          <div class="feed-card-top-left"><span class="badge badge-open">Open</span></div>
+          <div class="feed-card-top-right">
+            <button class="feed-icon-btn" title="Save" onclick="toast('Saved!')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9v10l-4.5-2.5L2 12V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="feed-icon-btn" title="Write comment" onclick="toast('Opening Comment Writer...')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 1.5l2 2L4 10H2V8L8.5 1.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="feed-title">Scaller vs AirOps — has anyone tried both? Looking for honest comparison</div>
+        <div class="feed-desc">High intent thread — users actively comparing tools before purchasing. Strong opportunity to address objections directly.</div>
+        <div class="feed-stats">
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5l-3.5 2.5V3.5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg> 31 Comments</span>
+          <span class="feed-stat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M3 5.5l3.5-3.5 3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 47 Votes</span>
+        </div>
+        <div class="feed-meta">
+          <span class="feed-meta-item"><span class="feed-meta-label">Brand Mentioned :</span><span class="feed-meta-val brand-yes">Yes</span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Sentiment :</span><span class="feed-meta-val"><span class="sentiment s-mix">Mixed</span></span></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">Competitor :</span><div class="comp-row"><div class="comp-avatar" title="AirOps" style="background:#fef3c7;color:#92400e">A</div></div></span>
+          <span class="feed-meta-sep">·</span>
+          <span class="feed-meta-item"><span class="feed-meta-label">AI Models :</span><div class="ai-row"><span class="ai-badge">ChatGPT</span></div></span>
+        </div>
+      </div>
+
+    </div><!-- end card-wrap -->
+
+
+<div id="toast"></div>
+
+<script>
+let currentMode = 'kw';
+
+function setMode(mode) {
+  currentMode = mode;
+  ['kw','ai'].forEach(m => document.getElementById('mode-' + m).classList.toggle('active', m === mode));
+  const descs = {
+    kw: 'Search Reddit threads by keyword from your keyword list',
+    ai: 'Pull threads already surfaced by Perplexity, ChatGPT & other AI engines'
+  };
+  const placeholders = {
+    kw: 'Enter seed keywords separated by commas (e.g. AI SEO tools, GEO optimization, Perplexity ranking...)',
+    ai: 'Enter topics to pull threads surfaced by AI engines (e.g. best AI SEO tools, GEO strategy...)'
+  };
+  document.getElementById('mode-desc').textContent = descs[mode];
+  document.getElementById('seed-input').placeholder = placeholders[mode];
+}
+
+function switchView(view) {
+  const tableWrap = document.getElementById('table-wrap');
+  const cardWrap = document.getElementById('card-wrap');
+  const btnRow = document.getElementById('btn-row');
+  const btnCard = document.getElementById('btn-card');
+  if (view === 'row') {
+    tableWrap.style.display = 'block';
+    cardWrap.style.display = 'none';
+    btnRow.classList.add('active');
+    btnCard.classList.remove('active');
+  } else {
+    tableWrap.style.display = 'none';
+    cardWrap.style.display = 'block';
+    btnCard.classList.add('active');
+    btnRow.classList.remove('active');
+  }
+}
+
+function runSearch() {
+  const val = document.getElementById('seed-input').value.trim();
+  if (!val) { toast('Please enter at least one keyword'); return; }
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('loading-state').style.display = 'flex';
+  document.getElementById('table-wrap').style.display = 'none';
+  document.getElementById('card-wrap').style.display = 'none';
+  document.getElementById('filter-bar').style.display = 'none';
+
+  setTimeout(() => {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('table-wrap').style.display = 'block';
+    document.getElementById('filter-bar').style.display = 'flex';
+    document.getElementById('btn-row').classList.add('active');
+    document.getElementById('btn-card').classList.remove('active');
+    toast('24 threads found!');
+  }, 1800);
+}
+
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// Allow Enter key to trigger search
+document.getElementById('seed-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runSearch();
+});
+</script>
+</body>
+</html>
