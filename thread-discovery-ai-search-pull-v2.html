@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thread Discovery — AI Search Pull</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --border2: #d0cec4;
+    --text: #1a1916;
+    --text2: #6b6960;
+    --text3: #a8a59c;
+    --accent: #1a1916;
+    --green: #1d7d48;
+    --green-bg: #e8f5ee;
+    --yellow: #92620a;
+    --yellow-bg: #fdf3e1;
+    --red: #c0392b;
+    --red-bg: #fdecea;
+    --blue: #1a4fa0;
+    --blue-bg: #e8eef8;
+    --orange: #b84c00;
+    --orange-bg: #fef0e6;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  /* ── TOP NAV ── */
+  .topnav {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 20px;
+    height: 44px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topnav-logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600; font-size: 14px;
+    letter-spacing: -0.5px; margin-right: 32px;
+  }
+  .topnav-logo span { color: var(--text3); }
+  .topnav-badge {
+    font-size: 9px; font-weight: 600;
+    padding: 2px 6px; border-radius: 2px;
+    background: var(--text); color: var(--surface);
+    margin-left: 6px; letter-spacing: 0.5px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .topnav-center { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .topnav-title { font-size: 13px; font-weight: 500; color: var(--text2); }
+  .topnav-right { display: flex; align-items: center; gap: 6px; }
+  .topnav-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 3px;
+    font-size: 11px; color: var(--text2);
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface); transition: all 0.1s;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .topnav-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; height: calc(100vh - 44px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 210px; min-width: 210px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 0; overflow-y: auto;
+  }
+  .sidebar-section {
+    padding: 12px 16px 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 1.5px; color: var(--text3);
+    text-transform: uppercase;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 16px; font-size: 12px; color: var(--text2);
+    cursor: pointer; border-left: 2px solid transparent;
+    transition: all 0.1s;
+  }
+  .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-item.active { color: var(--text); background: var(--surface2); border-left-color: var(--text); font-weight: 500; }
+
+  /* ── MAIN ── */
+  .main { flex: 1; overflow-y: auto; }
+
+  /* ── PAGE HEADER (top bar) ── */
+  .page-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 48px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .page-topbar-left { display: flex; align-items: center; gap: 8px; }
+  .page-topbar-title { font-size: 14px; font-weight: 600; }
+  .page-topbar-right { display: flex; gap: 6px; }
+
+  /* ── MODE TABS ── */
+  .mode-bar {
+    display: flex; align-items: center;
+    padding: 0 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .mode-tab {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 16px 11px;
+    font-size: 12px; font-weight: 500; color: var(--text3);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all 0.15s;
+  }
+  .mode-tab:hover { color: var(--text2); }
+  .mode-tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .mode-tab-icon { font-size: 11px; }
+
+  /* ── CONFIG SCREEN ── */
+  #config-screen { display: block; }
+  #results-screen { display: none; }
+
+  .config-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 24px;
+  }
+
+  /* Source info card */
+  .source-info {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 4px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+  }
+  .source-info-icon {
+    width: 32px; height: 32px; border-radius: 4px;
+    background: var(--blue-bg);
+    border: 1px solid #c5d5f0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--blue); flex-shrink: 0; margin-top: 1px;
+  }
+  .source-info-body { flex: 1; }
+  .source-info-label {
+    font-size: 10px; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--blue); letter-spacing: 0.5px;
+    text-transform: uppercase; margin-bottom: 3px;
+  }
+  .source-info-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .source-info-desc strong { color: var(--text); }
+  .source-info-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 6px; font-size: 11px; color: var(--blue);
+    cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+  .source-info-stat {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 2px; flex-shrink: 0;
+  }
+  .source-info-stat-num {
+    font-size: 22px; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--blue); letter-spacing: -1px;
+  }
+  .source-info-stat-label { font-size: 10px; color: var(--text3); text-align: right; }
+
+  /* Filter section */
+  .filter-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .filter-row {
+    display: flex; align-items: flex-start;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 20px;
+  }
+  .filter-row:last-child { border-bottom: none; }
+  .filter-left { width: 240px; flex-shrink: 0; }
+  .filter-name { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .filter-desc { font-size: 11px; color: var(--text3); line-height: 1.4; }
+  .filter-right { flex: 1; }
+
+  /* Controls */
+  .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 3px;
+    font-size: 11px; cursor: pointer;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2); transition: all 0.12s;
+    font-family: 'IBM Plex Sans', sans-serif;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--text3); color: var(--text); }
+  .chip.selected {
+    border-color: var(--text); color: var(--text);
+    background: var(--text); color: var(--surface);
+  }
+  .chip.selected.chatgpt { background: #e8f8f3; border-color: #10a37f; color: #10a37f; }
+  .chip.selected.perplexity { background: #eef2fd; border-color: #5b8af0; color: #5b8af0; }
+  .chip.selected.claude { background: #fdf5e8; border-color: #b8832a; color: #b8832a; }
+  .chip.selected.gemini { background: #f5f0fd; border-color: #7c3aed; color: #7c3aed; }
+  .chip .x { opacity: 0.5; font-size: 10px; margin-left: 2px; }
+
+  /* Range slider */
+  .range-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .range-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+  .range-inputs { display: flex; align-items: center; gap: 8px; }
+  .range-input {
+    flex: 1; padding: 6px 10px;
+    border: 1px solid var(--border2); border-radius: 3px;
+    background: var(--surface2); color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    text-align: center;
+  }
+  .range-sep { color: var(--text3); font-size: 11px; }
+  .slider-track {
+    width: 100%; height: 3px;
+    background: var(--border2); border-radius: 2px;
+    position: relative; margin: 4px 0;
+  }
+  .slider-fill {
+    position: absolute; height: 100%;
+    background: var(--text); border-radius: 2px;
+    left: 10%; right: 30%;
+  }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-label { font-size: 12px; color: var(--text2); }
+  .toggle {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: var(--text); cursor: pointer;
+    position: relative; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: white; top: 3px; right: 3px;
+    transition: right 0.2s;
+  }
+  .toggle.off { background: var(--border2); }
+  .toggle.off::after { right: auto; left: 3px; }
+
+  /* Date range */
+  .select-input {
+    width: 100%; padding: 7px 10px;
+    border: 1px solid var(--border2); border-radius: 3px;
+    background: var(--surface2); color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 12px;
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23a8a59c' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  /* CTA */
+  .config-cta {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 10px; margin-top: 20px;
+  }
+  .btn-ghost {
+    padding: 8px 16px; border-radius: 3px;
+    font-size: 12px; color: var(--text2);
+    border: 1px solid var(--border2); cursor: pointer;
+    background: var(--surface);
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.1s;
+  }
+  .btn-ghost:hover { border-color: var(--text3); color: var(--text); }
+  .btn-discover {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 20px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+    background: var(--text); color: var(--surface);
+    border: none; cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: opacity 0.15s; letter-spacing: -0.2px;
+  }
+  .btn-discover:hover { opacity: 0.85; }
+
+  /* ── RESULTS SCREEN ── */
+  .results-wrap { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* back bar */
+  .results-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .back-btn {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text2); cursor: pointer;
+    padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px;
+    background: var(--surface); transition: all 0.1s;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .back-btn:hover { color: var(--text); border-color: var(--border2); }
+  .results-actions { display: flex; gap: 6px; }
+
+  /* active filters summary */
+  .active-filters {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-size: 11px; color: var(--text2);
+  }
+  .af-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-right: 4px; }
+  .af-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 2px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    font-size: 10px; color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .af-spacer { flex: 1; }
+  .af-edit {
+    font-size: 11px; color: var(--blue);
+    cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+
+  /* stats */
+  .stats-row { display: flex; gap: 10px; }
+  .stat-card {
+    flex: 1; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .stat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: 'IBM Plex Mono', monospace; }
+  .stat-value { font-size: 20px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; letter-spacing: -1px; }
+  .stat-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .c-blue { color: var(--blue); }
+  .c-green { color: var(--green); }
+  .c-yellow { color: var(--yellow); }
+
+  /* table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden;
+  }
+  .table-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+  .table-bar-left { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+  .table-bar-left strong { color: var(--text); }
+  .table-bar-right { display: flex; gap: 6px; }
+  .tbl-btn {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 2px;
+    font-size: 11px; color: var(--text2);
+    border: 1px solid var(--border2); cursor: pointer;
+    background: var(--surface); transition: all 0.1s;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .tbl-btn:hover { color: var(--text); border-color: var(--border2); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 8px 12px; text-align: left;
+    font-size: 9px; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap; cursor: pointer; user-select: none;
+    background: var(--surface2);
+  }
+  thead th:hover { color: var(--text2); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; cursor: pointer; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 10px 12px; vertical-align: middle; }
+
+  .thread-title { font-size: 12px; font-weight: 500; margin-bottom: 3px; color: var(--text); }
+  .thread-meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text3); }
+  .thread-sub { color: var(--blue); }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 7px; border-radius: 2px;
+    font-size: 10px; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace; white-space: nowrap;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+
+  .ai-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ai-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 6px; border-radius: 2px; font-size: 9px;
+    font-weight: 600; font-family: 'IBM Plex Mono', monospace; border: 1px solid; white-space: nowrap;
+  }
+  .ai-tag.chatgpt { color: #10a37f; border-color: #b0ddd0; background: #e8f8f3; }
+  .ai-tag.perplexity { color: #3b5fe0; border-color: #bccaf5; background: #eef2fd; }
+  .ai-tag.claude { color: #b8832a; border-color: #e0c98a; background: #fdf5e8; }
+  .ai-tag.gemini { color: #7c3aed; border-color: #c4acf0; background: #f5f0fd; }
+
+  .mono-sm { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; }
+
+  .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.1s; }
+  tbody tr:hover .row-actions { opacity: 1; }
+  .row-btn {
+    display: flex; align-items: center; gap: 3px;
+    padding: 4px 8px; border-radius: 2px;
+    font-size: 10px; color: var(--text2);
+    border: 1px solid var(--border2); cursor: pointer;
+    background: var(--surface); transition: all 0.1s;
+    font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap;
+  }
+  .row-btn:hover { color: var(--text); }
+  .row-btn.primary { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .row-btn.primary:hover { opacity: 0.85; }
+  .row-btn.op { color: var(--orange); border-color: #f5c4a0; background: var(--orange-bg); }
+  .row-btn.op:hover { border-color: var(--orange); }
+
+  .cb { width: 14px; height: 14px; border: 1px solid var(--border2); border-radius: 2px; background: var(--surface2); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* ── scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* loading animation */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .loading-state { display: none; }
+  .loading-state.active { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 48px; }
+  .loading-dots { display: flex; gap: 6px; }
+  .loading-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: pulse 1.2s ease-in-out infinite; }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  .loading-text { font-size: 12px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div style="display:flex;align-items:center;">
+    <div class="topnav-logo">Scaller<span>.co</span> <span class="topnav-badge">PRO</span></div>
+  </div>
+  <div class="topnav-center">
+    <div class="topnav-title">Threads Discovery</div>
+  </div>
+  <div class="topnav-right">
+    <div class="topnav-btn">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Sitemap
+    </div>
+    <div class="topnav-btn">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Keyword Lists
+    </div>
+    <div class="topnav-btn">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Overview</div>
+    <div class="sidebar-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="sidebar-section">Analytics</div>
+    <div class="sidebar-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </div>
+    <div class="sidebar-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Competitor Intel
+    </div>
+    <div class="sidebar-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Sources
+    </div>
+    <div class="sidebar-section">Workflows</div>
+    <div class="sidebar-item active">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Reddit
+    </div>
+    <div class="sidebar-section">Brand</div>
+    <div class="sidebar-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Brand Kit
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- MODE TABS -->
+    <div class="mode-bar">
+      <div class="mode-tab" onclick="switchMode('keyword')">
+        <span class="mode-tab-icon">#</span>
+        Keywords Targeting
+      </div>
+      <div class="mode-tab active" id="ai-tab">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        AI Search Pull
+      </div>
+      <div class="mode-tab" onclick="switchMode('active')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Active Threads
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- CONFIG SCREEN                      -->
+    <!-- ══════════════════════════════════ -->
+    <div id="config-screen">
+      <div class="config-wrap">
+
+        <!-- Source info -->
+        <div class="source-info">
+          <div class="source-info-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <div class="source-info-body">
+            <div class="source-info-label">Data Source: Analytics → Sources</div>
+            <div class="source-info-desc">
+              Threads are pulled from Reddit URLs already indexed in your <strong>Sources screen</strong> — these are threads that appeared in AI engine responses (ChatGPT, Claude, Gemini, Perplexity) for the prompts you're tracking.
+            </div>
+            <div class="source-info-link">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              View Sources Screen
+            </div>
+          </div>
+          <div class="source-info-stat">
+            <div class="source-info-stat-num">248</div>
+            <div class="source-info-stat-label">Reddit threads<br>available</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section">
+
+          <!-- AI Models -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">AI Models</div>
+              <div class="filter-desc">Only pull threads sourced from these AI engines</div>
+            </div>
+            <div class="filter-right">
+              <div class="chip-group">
+                <div class="chip selected chatgpt" onclick="toggleChip(this)">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+                  ChatGPT
+                </div>
+                <div class="chip selected claude" onclick="toggleChip(this)">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  Claude
+                </div>
+                <div class="chip selected gemini" onclick="toggleChip(this)">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  Gemini
+                </div>
+                <div class="chip selected perplexity" onclick="toggleChip(this)">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  Perplexity
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Goal Type -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">Goal Type</div>
+              <div class="filter-desc">Filter threads by the marketing goal they're best suited for</div>
+            </div>
+            <div class="filter-right">
+              <div class="chip-group">
+                <div class="chip selected" onclick="toggleChip(this)" style="border-color:#1a4fa0;color:#1a4fa0;background:#e8eef8;">AI Visibility</div>
+                <div class="chip selected" onclick="toggleChip(this)" style="border-color:#1a4fa0;color:#1a4fa0;background:#e8eef8;">SEO</div>
+                <div class="chip selected" onclick="toggleChip(this)" style="border-color:#c0392b;color:#c0392b;background:#fdecea;">Reputation Mgmt</div>
+                <div class="chip selected" onclick="toggleChip(this)" style="border-color:#1d7d48;color:#1d7d48;background:#e8f5ee;">Community</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Number of Comments -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">Number of Comments</div>
+              <div class="filter-desc">More comments means more engagement opportunity</div>
+            </div>
+            <div class="filter-right">
+              <div class="range-wrap">
+                <div class="slider-track"><div class="slider-fill"></div></div>
+                <div class="range-inputs">
+                  <input class="range-input" value="20 Comments" readonly>
+                  <span class="range-sep">–</span>
+                  <input class="range-input" value="300 Comments" readonly>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Date Range -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">Date Range</div>
+              <div class="filter-desc">Include threads posted within this period</div>
+            </div>
+            <div class="filter-right">
+              <select class="select-input">
+                <option>90 Days range</option>
+                <option>30 Days range</option>
+                <option>6 Months range</option>
+                <option>1 Year range</option>
+                <option>All time</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Brand Mentioned -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">Brand Mentioned</div>
+              <div class="filter-desc">Show only threads that mention your brand</div>
+            </div>
+            <div class="filter-right">
+              <div class="toggle-row">
+                <span class="toggle-label">Only show threads with brand mention</span>
+                <div class="toggle off" onclick="this.classList.toggle('off')"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subreddit -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">Subreddit</div>
+              <div class="filter-desc">Narrow results to specific subreddit communities</div>
+            </div>
+            <div class="filter-right">
+              <div class="chip-group" style="margin-bottom:8px;">
+                <div class="chip selected" style="border-color:var(--text);color:var(--text);background:var(--surface2);" onclick="toggleChip(this)">Include subreddit</div>
+                <div class="chip" onclick="toggleChip(this)">Exclude subreddit</div>
+                <div class="chip" onclick="toggleChip(this)">By Metrics</div>
+              </div>
+              <div class="chip-group">
+                <div class="chip selected" style="border-color:var(--blue);color:var(--blue);background:var(--blue-bg);" onclick="toggleChip(this)">r/SEO <span class="x">×</span></div>
+                <div class="chip selected" style="border-color:var(--blue);color:var(--blue);background:var(--blue-bg);" onclick="toggleChip(this)">r/marketing <span class="x">×</span></div>
+                <div class="chip" style="border-style:dashed;">+ Add subreddit</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Found Archived -->
+          <div class="filter-row">
+            <div class="filter-left">
+              <div class="filter-name">Include Archived Threads</div>
+              <div class="filter-desc">Include threads that are closed for new comments</div>
+            </div>
+            <div class="filter-right">
+              <div class="toggle-row">
+                <span class="toggle-label">Show archived threads (OP Post candidates)</span>
+                <div class="toggle" onclick="this.classList.toggle('off')"></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /filter-section -->
+
+        <!-- CTA -->
+        <div class="config-cta">
+          <div class="btn-ghost">Reset filters</div>
+          <button class="btn-discover" onclick="discoverThreads()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            Discover Threads
+          </button>
+        </div>
+
+      </div><!-- /config-wrap -->
+    </div><!-- /config-screen -->
+
+    <!-- ══════════════════════════════════ -->
+    <!-- LOADING                            -->
+    <!-- ══════════════════════════════════ -->
+    <div id="loading-screen" style="display:none;padding:60px;text-align:center;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <div class="loading-dots">
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+        </div>
+        <div class="loading-text">Pulling threads from Sources…</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- RESULTS SCREEN                     -->
+    <!-- ══════════════════════════════════ -->
+    <div id="results-screen">
+      <div class="results-wrap">
+
+        <!-- Top bar -->
+        <div class="results-topbar">
+          <div class="back-btn" onclick="backToConfig()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Edit filters
+          </div>
+          <div class="results-actions">
+            <div class="tbl-btn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Push to Slack
+            </div>
+            <div class="tbl-btn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export
+            </div>
+          </div>
+        </div>
+
+        <!-- Active filters summary -->
+        <div class="active-filters">
+          <span class="af-label">Filters</span>
+          <span class="af-chip">ChatGPT · Claude · Gemini · Perplexity</span>
+          <span class="af-chip">All Goals</span>
+          <span class="af-chip">20–300 comments</span>
+          <span class="af-chip">90 days</span>
+          <span class="af-chip">r/SEO · r/marketing</span>
+          <span class="af-chip">Incl. Archived</span>
+          <span class="af-spacer"></span>
+          <span class="af-edit" onclick="backToConfig()">Edit →</span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Threads Found</div>
+            <div class="stat-value c-blue">187</div>
+            <div class="stat-sub">of 248 matched filters</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg. Comments</div>
+            <div class="stat-value c-green">142</div>
+            <div class="stat-sub">per thread</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active (commentable)</div>
+            <div class="stat-value c-green">61</div>
+            <div class="stat-sub">ready to engage</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Archived</div>
+            <div class="stat-value c-yellow">126</div>
+            <div class="stat-sub">OP Post candidates</div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+          <div class="table-bar">
+            <div class="table-bar-left"><strong>187</strong> threads · AI Search Pull · sorted by comments</div>
+            <div class="table-bar-right">
+              <div class="tbl-btn">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Columns
+              </div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:28px;"><div class="cb"></div></th>
+                <th style="min-width:300px;">Thread</th>
+                <th>Comments ↓</th>
+                <th>Status</th>
+                <th>Found In</th>
+                <th>Goal Type</th>
+                <th>Brand Mention</th>
+                <th style="width:150px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="cb"></div></td>
+                <td>
+                  <div class="thread-title">Best AI SEO tools for in-house teams in 2025 — what's everyone using?</div>
+                  <div class="thread-meta"><span class="thread-sub">r/SEO</span><span>·</span><span>3 days ago</span></div>
+                </td>
+                <td><span class="mono-sm c-green">847</span></td>
+                <td><span class="badge badge-green">Active</span></td>
+                <td><div class="ai-tags"><span class="ai-tag chatgpt">ChatGPT</span><span class="ai-tag perplexity">Perplexity</span></div></td>
+                <td><span class="badge badge-blue">AI Visibility</span></td>
+                <td><span style="color:var(--green);font-size:11px;font-weight:500;">✓ Yes</span></td>
+                <td><div class="row-actions"><div class="row-btn">View</div><div class="row-btn primary">Comment →</div></div></td>
+              </tr>
+              <tr>
+                <td><div class="cb"></div></td>
+                <td>
+                  <div class="thread-title">AirOps vs Jasper vs Writer — honest reviews from someone who tried all three</div>
+                  <div class="thread-meta"><span class="thread-sub">r/marketing</span><span>·</span><span>1 week ago</span></div>
+                </td>
+                <td><span class="mono-sm c-green">412</span></td>
+                <td><span class="badge badge-green">Active</span></td>
+                <td><div class="ai-tags"><span class="ai-tag chatgpt">ChatGPT</span><span class="ai-tag claude">Claude</span><span class="ai-tag gemini">Gemini</span></div></td>
+                <td><span class="badge badge-red">Reputation Mgmt</span></td>
+                <td><span style="color:var(--green);font-size:11px;font-weight:500;">✓ Yes</span></td>
+                <td><div class="row-actions"><div class="row-btn">View</div><div class="row-btn primary">Comment →</div></div></td>
+              </tr>
+              <tr>
+                <td><div class="cb"></div></td>
+                <td>
+                  <div class="thread-title">How AI is changing SEO forever — is traditional keyword research dead?</div>
+                  <div class="thread-meta"><span class="thread-sub">r/SEO</span><span>·</span><span>2 weeks ago</span></div>
+                </td>
+                <td><span class="mono-sm c-yellow">238</span></td>
+                <td><span class="badge badge-yellow">Archived</span></td>
+                <td><div class="ai-tags"><span class="ai-tag perplexity">Perplexity</span></div></td>
+                <td><span class="badge badge-blue">AI Visibility</span></td>
+                <td><span style="color:var(--text3);font-size:11px;">— No</span></td>
+                <td><div class="row-actions"><div class="row-btn">View</div><div class="row-btn op">Make OP Post →</div></div></td>
+              </tr>
+              <tr>
+                <td><div class="cb"></div></td>
+                <td>
+                  <div class="thread-title">Comparing AI content tools — which ones actually help with GEO?</div>
+                  <div class="thread-meta"><span class="thread-sub">r/artificial</span><span>·</span><span>5 days ago</span></div>
+                </td>
+                <td><span class="mono-sm c-green">189</span></td>
+                <td><span class="badge badge-green">Active</span></td>
+                <td><div class="ai-tags"><span class="ai-tag chatgpt">ChatGPT</span><span class="ai-tag gemini">Gemini</span></div></td>
+                <td><span class="badge badge-blue">AI Visibility</span></td>
+                <td><span style="color:var(--text3);font-size:11px;">— No</span></td>
+                <td><div class="row-actions"><div class="row-btn">View</div><div class="row-btn primary">Comment →</div></div></td>
+              </tr>
+              <tr>
+                <td><div class="cb"></div></td>
+                <td>
+                  <div class="thread-title">What's the best way to track your brand mentions across Reddit?</div>
+                  <div class="thread-meta"><span class="thread-sub">r/startups</span><span>·</span><span>3 weeks ago</span></div>
+                </td>
+                <td><span class="mono-sm c-yellow">97</span></td>
+                <td><span class="badge badge-yellow">Archived</span></td>
+                <td><div class="ai-tags"><span class="ai-tag claude">Claude</span></div></td>
+                <td><span class="badge badge-red">Reputation Mgmt</span></td>
+                <td><span style="color:var(--green);font-size:11px;font-weight:500;">✓ Yes</span></td>
+                <td><div class="row-actions"><div class="row-btn">View</div><div class="row-btn op">Make OP Post →</div></div></td>
+              </tr>
+              <tr>
+                <td><div class="cb"></div></td>
+                <td>
+                  <div class="thread-title">Future of AI Search Optimization — GEO vs SEO strategies for 2025</div>
+                  <div class="thread-meta"><span class="thread-sub">r/digital_marketing</span><span>·</span><span>1 month ago</span></div>
+                </td>
+                <td><span class="mono-sm" style="color:var(--text2);">54</span></td>
+                <td><span class="badge badge-yellow">Archived</span></td>
+                <td><div class="ai-tags"><span class="ai-tag chatgpt">ChatGPT</span><span class="ai-tag perplexity">Perplexity</span><span class="ai-tag claude">Claude</span></div></td>
+                <td><span class="badge badge-blue">SEO</span></td>
+                <td><span style="color:var(--text3);font-size:11px;">— No</span></td>
+                <td><div class="row-actions"><div class="row-btn">View</div><div class="row-btn op">Make OP Post →</div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div><!-- /results-screen -->
+
+  </main>
+</div>
+
+<script>
+  function toggleChip(el) {
+    el.classList.toggle('selected');
+  }
+
+  function discoverThreads() {
+    document.getElementById('config-screen').style.display = 'none';
+    document.getElementById('loading-screen').style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('results-screen').style.display = 'block';
+    }, 1800);
+  }
+
+  function backToConfig() {
+    document.getElementById('results-screen').style.display = 'none';
+    document.getElementById('config-screen').style.display = 'block';
+  }
+
+  function switchMode(mode) {
+    alert('Switch to ' + mode + ' mode (not wired in this wireframe)');
+  }
+</script>
+</body>
+</html>
